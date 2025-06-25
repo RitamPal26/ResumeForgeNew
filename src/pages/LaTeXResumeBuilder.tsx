@@ -197,7 +197,7 @@ const handleExportPDF = () => {
                 disabled={compiling}
                 loading={compiling}
               >
-                Export PDF
+                Download LaTeX
               </Button>
             </div>
             
