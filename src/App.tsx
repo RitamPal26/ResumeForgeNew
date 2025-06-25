@@ -16,6 +16,7 @@ import { Dashboard } from './pages/Dashboard';
 import { ProfileSettings } from './pages/ProfileSettings';
 import { HistoryDashboard } from './pages/HistoryDashboard';
 import { PricingPage } from './pages/PricingPage';
+import { LaTeXResumeBuilder } from './pages/LaTeXResumeBuilder';
 import { usePerformanceMonitor } from './hooks/usePerformanceMonitor';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -150,6 +151,18 @@ function AppContent() {
               <ProtectedRoute>
                 <PageTransition>
                   <HistoryDashboard />
+                </PageTransition>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* LaTeX Resume Builder route */}
+          <Route
+            path="/resume-builder"
+            element={
+              <ProtectedRoute>
+                <PageTransition>
+                  <LaTeXResumeBuilder />
                 </PageTransition>
               </ProtectedRoute>
             }

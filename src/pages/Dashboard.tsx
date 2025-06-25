@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+  Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History, FileCode
 import { DeveloperProfileDashboard } from '../components/developer/DeveloperProfileDashboard';
 
 export function Dashboard() {
@@ -97,6 +97,15 @@ export function Dashboard() {
                 <BarChart3 className="w-5 h-5" />
                 <span>Dashboard</span>
               </button>
+            </li>
+            <li>
+              <Link
+                to="/resume-builder"
+                className="flex items-center space-x-3 px-4 py-3 text-secondary-600 dark:text-secondary-300 rounded-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors"
+              >
+                <FileCode className="w-5 h-5" />
+                <span>LaTeX Resume Builder</span>
+              </Link>
             </li>
             <li>
               <button
@@ -273,8 +282,8 @@ export function Dashboard() {
                 </table>
               </div>
             </div>
-
-            {/* Quick Actions */}
+            
+            <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
                 <Upload className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
