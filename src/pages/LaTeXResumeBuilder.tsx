@@ -59,27 +59,32 @@ export function LaTeXResumeBuilder() {
   };
   
   // In your LaTeXResumeBuilder.tsx, add this fallback:
-const handleExportPDF = async () => {
+const handleExportPDF = () => {
   try {
-    // Try PDF export first
-    const response = await supabase.functions.invoke('latex-compiler', {
-      body: { latexContent }
-    });
-    
-    if (response.error) throw response.error;
-    
-    // Handle PDF download...
-  } catch (error) {
-    // Fallback: Download LaTeX source
+    // Create a blob with the LaTeX content
     const blob = new Blob([latexContent], { type: 'text/plain' });
+    
+    // Create a temporary URL for the blob
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'resume.tex';
-    a.click();
+    
+    // Create a temporary anchor element and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'resume.tex';
+    link.style.display = 'none';
+    
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the URL object
     URL.revokeObjectURL(url);
     
-    alert('PDF service unavailable. LaTeX source downloaded - you can compile it locally with any LaTeX distribution.');
+    showToast.success('LaTeX file downloaded successfully');
+  } catch (error) {
+    console.error('Download failed:', error);
+    showToast.error('Failed to download file. Please try again.');
   }
 };
     
