@@ -1,4 +1,4 @@
-// GitHub API service with in-memory caching
+// GitHub API service with real data fetching and authentication
 import cacheService from './cache';
 import errorHandler from './errorHandler';
 
@@ -30,28 +30,37 @@ class GitHubService {
   constructor() {
     this.baseURL = 'https://api.github.com';
     this.cache = new SimpleCache(); // Keep for backward compatibility
+    // GitHub Personal Access Token - set this as an environment variable
+    this.githubToken = import.meta.env.VITE_GITHUB_TOKEN || null;
     this.apiConfig = {
       maxRetries: 3,
       cacheTimeout: 6 * 60 * 60 * 1000, // 6 hours
       rateLimit: {
-        maxRequests: 5000,
+        maxRequests: this.githubToken ? 5000 : 60, // Higher limits with auth
         windowMs: 60 * 60 * 1000 // 1 hour
       }
     };
   }
 
-  // Generic API request handler
+  // Generic API request handler with authentication and retry-after handling
   async makeRequest(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     
     return await errorHandler.withRetry(async () => {
       try {
+        const headers = {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'ResumeForge-App',
+          ...options.headers
+        };
+
+        // Add authentication if token is available
+        if (this.githubToken) {
+          headers['Authorization'] = `token ${this.githubToken}`;
+        }
+
         const response = await fetch(url, {
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'ResumeForge-App',
-            ...options.headers
-          },
+          headers,
           ...options
         });
 
@@ -59,9 +68,20 @@ class GitHubService {
           if (response.status === 404) {
             throw new Error('User not found. Please check the username and try again.');
           } else if (response.status === 403) {
-            const resetTime = response.headers.get('X-RateLimit-Reset');
-            const resetDate = new Date(resetTime * 1000);
-            throw new Error(`GitHub API rate limit exceeded. Try again after ${resetDate.toLocaleTimeString()}.`);
+            const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining');
+            const rateLimitReset = response.headers.get('X-RateLimit-Reset');
+            const retryAfter = response.headers.get('Retry-After');
+            
+            if (rateLimitRemaining === '0' || retryAfter) {
+              const waitTime = retryAfter ? 
+                parseInt(retryAfter) : 
+                Math.max(0, (parseInt(rateLimitReset) * 1000) - Date.now());
+              
+              const waitMinutes = Math.ceil(waitTime / 60000);
+              throw new Error(`GitHub API rate limit exceeded. Please try again in ${waitMinutes} minute${waitMinutes !== 1 ? 's' : ''}.`);
+            }
+            
+            throw new Error('GitHub API access forbidden. Please check your authentication credentials.');
           } else if (response.status === 401) {
             throw new Error('GitHub API authentication failed. Please check your credentials.');
           } else if (response.status >= 500) {
@@ -95,7 +115,6 @@ class GitHubService {
     if (forceRefresh) {
       await cacheService.invalidate('github', 'profile', username);
     }
-    
 
     const data = await this.makeRequest(`/users/${username}`);
     
@@ -137,7 +156,6 @@ class GitHubService {
     if (forceRefresh) {
       await cacheService.invalidate('github', 'repositories', `${username}_${limit}`);
     }
-    
 
     const data = await this.makeRequest(`/users/${username}/repos?sort=updated&per_page=${limit}`);
     
@@ -159,7 +177,17 @@ class GitHubService {
       pushed_at: repo.pushed_at,
       private: repo.private || false,
       fork: repo.fork || false,
-      archived: repo.archived || false
+      archived: repo.archived || false,
+      open_issues_count: repo.open_issues_count || 0,
+      has_issues: repo.has_issues || false,
+      has_projects: repo.has_projects || false,
+      has_wiki: repo.has_wiki || false,
+      has_pages: repo.has_pages || false,
+      has_downloads: repo.has_downloads || false,
+      license: repo.license ? {
+        key: repo.license.key,
+        name: repo.license.name
+      } : null
     }));
 
     // Cache the result
@@ -167,8 +195,75 @@ class GitHubService {
     return repositories;
   }
 
-  // Calculate language statistics from repositories
-  async fetchLanguageStats(username, forceRefresh = false) {
+  // Fetch repository languages with real API data
+  async fetchRepositoryLanguages(owner, repo, forceRefresh = false) {
+    if (!owner || !repo) {
+      throw new Error('Owner and repository name are required to fetch languages.');
+    }
+
+    const cacheKey = `${owner}_${repo}`;
+    
+    // Try cache service first
+    const cached = forceRefresh ? null : await cacheService.get('github', 'repo_languages', cacheKey);
+    if (cached) return cached;
+    
+    if (forceRefresh) {
+      await cacheService.invalidate('github', 'repo_languages', cacheKey);
+    }
+
+    try {
+      const data = await this.makeRequest(`/repos/${owner}/${repo}/languages`);
+      
+      // Cache the result
+      await cacheService.set('github', 'repo_languages', cacheKey, data);
+      return data;
+    } catch (error) {
+      // If repo languages can't be fetched (e.g., empty repo), return empty object
+      if (error.message.includes('not found') || error.message.includes('404')) {
+        return {};
+      }
+      throw error;
+    }
+  }
+
+  // Fetch repository commit activity with real API data
+  async fetchRepoCommitActivity(owner, repo, forceRefresh = false) {
+    if (!owner || !repo) {
+      throw new Error('Owner and repository name are required to fetch commit activity.');
+    }
+
+    const cacheKey = `${owner}_${repo}`;
+    
+    // Try cache service first
+    const cached = forceRefresh ? null : await cacheService.get('github', 'repo_commits', cacheKey);
+    if (cached) return cached;
+    
+    if (forceRefresh) {
+      await cacheService.invalidate('github', 'repo_commits', cacheKey);
+    }
+
+    try {
+      const data = await this.makeRequest(`/repos/${owner}/${repo}/stats/commit_activity`);
+      
+      if (!data || data.length === 0) {
+        // Return empty activity if no data available
+        return [];
+      }
+      
+      // Cache the result
+      await cacheService.set('github', 'repo_commits', cacheKey, data);
+      return data;
+    } catch (error) {
+      // If commit activity can't be fetched, return empty array
+      if (error.message.includes('not found') || error.message.includes('404')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  // Calculate language statistics from REAL repository language data
+  async fetchLanguageStats(username, limit = 100, forceRefresh = false) {
     if (!username) {
       throw new Error('Username is required to fetch language statistics.');
     }
@@ -181,31 +276,46 @@ class GitHubService {
     if (forceRefresh) {
       await cacheService.invalidate('github', 'languages', username);
     }
-    
 
-    const repositories = await this.fetchUserRepositories(username, 100, forceRefresh);
+    const repositories = await this.fetchUserRepositories(username, limit, forceRefresh);
+    const activeRepos = repositories.filter(repo => !repo.fork && !repo.archived);
     
-    const languageStats = {};
-    let totalSize = 0;
+    const languageBytes = new Map();
+    let totalBytes = 0;
 
-    // Count languages from repositories
-    repositories.forEach(repo => {
-      if (repo.language && !repo.fork && !repo.archived) {
-        languageStats[repo.language] = (languageStats[repo.language] || 0) + (repo.size || 1);
-        totalSize += (repo.size || 1);
+    // Fetch real language data for each repository (serial calls to avoid rate limits)
+    for (const repo of activeRepos.slice(0, 20)) { // Limit to top 20 repos to manage API calls
+      try {
+        const languages = await this.fetchRepositoryLanguages(repo.full_name.split('/')[0], repo.name, forceRefresh);
+        
+        // Weight languages by repository significance (stars + recent activity)
+        const significance = Math.max(1, repo.stargazers_count * 2 + repo.forks_count + 
+          (new Date() - new Date(repo.updated_at)) / (1000 * 60 * 60 * 24 * 365) < 1 ? 10 : 0);
+        
+        Object.entries(languages).forEach(([language, bytes]) => {
+          const weightedBytes = bytes * significance;
+          languageBytes.set(language, (languageBytes.get(language) || 0) + weightedBytes);
+          totalBytes += weightedBytes;
+        });
+        
+        // Add small delay between requests to be respectful to GitHub API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.warn(`Failed to fetch languages for ${repo.full_name}:`, error.message);
+        // Continue with other repositories
       }
-    });
+    }
 
     // Convert to percentage and sort
-    const languageArray = Object.entries(languageStats)
-      .map(([language, size]) => ({
+    const languageArray = Array.from(languageBytes.entries())
+      .map(([language, bytes]) => ({
         language,
-        size,
-        percentage: totalSize > 0 ? ((size / totalSize) * 100).toFixed(1) : 0,
+        size: Math.round(bytes),
+        percentage: totalBytes > 0 ? parseFloat(((bytes / totalBytes) * 100).toFixed(1)) : 0,
         color: this.getLanguageColor(language)
       }))
       .sort((a, b) => b.size - a.size)
-      .slice(0, 5); // Top 5 languages
+      .slice(0, 8); // Top 8 languages
 
     // Cache the result
     await cacheService.set('github', 'languages', username, languageArray);
@@ -226,7 +336,6 @@ class GitHubService {
     if (forceRefresh) {
       await cacheService.invalidate('github', 'activity', `${username}_${limit}`);
     }
-    
 
     const data = await this.makeRequest(`/users/${username}/events/public?per_page=${limit}`);
     
