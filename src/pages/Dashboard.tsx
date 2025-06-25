@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+import { Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History, FileCode } from 'lucide-react';
 import { DeveloperProfileDashboard } from '../components/developer/DeveloperProfileDashboard';
+import {Button} from '../components/ui/Button';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = React.useState('overview');
@@ -97,6 +97,15 @@ export function Dashboard() {
                 <BarChart3 className="w-5 h-5" />
                 <span>Dashboard</span>
               </button>
+            </li>
+            <li>
+              <Link
+                to="/resume-builder"
+                className="flex items-center space-x-3 px-4 py-3 text-secondary-600 dark:text-secondary-300 rounded-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors"
+              >
+                <FileCode className="w-5 h-5" />
+                <span>LaTeX Resume Builder</span>
+              </Link>
             </li>
             <li>
               <button
@@ -273,32 +282,33 @@ export function Dashboard() {
                 </table>
               </div>
             </div>
-
-            {/* Quick Actions */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
-                <Upload className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
-                <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2 transition-colors duration-300">Upload Resume</h3>
-                <p className="text-secondary-600 dark:text-secondary-400 text-sm transition-colors duration-300">
-                  Upload an existing resume to start optimizing it with our AI tools.
-                </p>
+            
+            <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
+                  <Upload className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
+                  <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2 transition-colors duration-300">Upload Resume</h3>
+                  <p className="text-secondary-600 dark:text-secondary-400 text-sm transition-colors duration-300">
+                    Upload an existing resume to start optimizing it with our AI tools.
+                  </p>
+                </div>
+                
+                <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
+                  <FileText className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
+                  <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2 transition-colors duration-300">Start from Template</h3>
+                  <p className="text-secondary-600 dark:text-secondary-400 text-sm transition-colors duration-300">
+                    Choose from our professionally designed templates to build your resume.
+                  </p>
+                </div>
+                
+                <Link to="/history" className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
+                  <BarChart3 className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
+                  <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2 transition-colors duration-300">View Analysis History</h3>
+                  <p className="text-secondary-600 dark:text-secondary-400 text-sm transition-colors duration-300">
+                    Track your progress and view detailed analysis reports over time.
+                  </p>
+                </Link>
               </div>
-              
-              <div className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
-                <FileText className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
-                <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2 transition-colors duration-300">Start from Template</h3>
-                <p className="text-secondary-600 dark:text-secondary-400 text-sm transition-colors duration-300">
-                  Choose from our professionally designed templates to build your resume.
-                </p>
-              </div>
-              
-              <Link to="/history" className="bg-white dark:bg-secondary-800 p-6 rounded-xl shadow-sm border border-secondary-200 dark:border-secondary-700 hover:shadow-md transition-all duration-300 cursor-pointer">
-                <BarChart3 className="w-8 h-8 text-primary-600 dark:text-primary-400 mb-4 transition-colors duration-300" />
-                <h3 className="text-lg font-semibold text-secondary-900 dark:text-white mb-2 transition-colors duration-300">View Analysis History</h3>
-                <p className="text-secondary-600 dark:text-secondary-400 text-sm transition-colors duration-300">
-                  Track your progress and view detailed analysis reports over time.
-                </p>
-              </Link>
             </div>
           </>
         )}
