@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History, FileCode } from 'lucide-react';
 import { DeveloperProfileDashboard } from '../components/developer/DeveloperProfileDashboard';
-import {Button} from ../components/ui/Button;
+import {Button} from '../components/ui/Button';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = React.useState('overview');
