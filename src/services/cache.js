@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 // Centralized caching service for API responses
 class CacheService {
@@ -10,14 +10,15 @@ class CacheService {
 
   // Generate cache key
   generateKey(service, method, params) {
-    const paramString = typeof params === 'object' ? JSON.stringify(params) : String(params);
+    const paramString =
+      typeof params === "object" ? JSON.stringify(params) : String(params);
     return `${service}_${method}_${paramString}`;
   }
 
   // Get from memory cache first, then database
   async get(service, method, params) {
     const key = this.generateKey(service, method, params);
-    
+
     // Check memory cache first
     const memoryResult = this.getFromMemory(key);
     if (memoryResult) {
@@ -38,16 +39,18 @@ class CacheService {
   // Set cache in both memory and database
   async set(service, method, params, data, ttl = this.defaultTTL) {
     const key = this.generateKey(service, method, params);
-    
+
     // Defensive check at the entry point as well
     if (data === null || data === undefined) {
-      console.warn(`Attempted to cache null/undefined data for ${service}.${method}. Skipping cache storage.`);
+      console.warn(
+        `Attempted to cache null/undefined data for ${service}.${method}. Skipping cache storage.`
+      );
       return;
     }
-    
+
     // Set in memory cache
     this.setInMemory(key, data, ttl);
-    
+
     // Set in database cache
     await this.setInDatabase(key, data, ttl);
   }
@@ -58,11 +61,11 @@ class CacheService {
     if (cached && Date.now() < cached.expiry) {
       return cached.data;
     }
-    
+
     if (cached) {
       this.memoryCache.delete(key);
     }
-    
+
     return null;
   }
 
@@ -76,7 +79,7 @@ class CacheService {
     this.memoryCache.set(key, {
       data,
       expiry: Date.now() + ttl,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -84,17 +87,22 @@ class CacheService {
   async getFromDatabase(key) {
     try {
       const { data, error } = await supabase
-        .from('api_cache')
-        .select('data, expires_at')
-        .eq('cache_key', key)
-        .single();
+        .from("api_cache")
+        .select("data, expires_at")
+        .eq("cache_key", key)
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           return null; // No data found
         }
-        console.error('Unexpected database cache error:', error);
+        console.error("Unexpected database cache error:", error);
         return null;
+      }
+
+      // ✅ FIX: Check if data is null before accessing expires_at
+      if (!data) {
+        return null; // Cache miss - no data found
       }
 
       if (new Date() > new Date(data.expires_at)) {
@@ -105,7 +113,7 @@ class CacheService {
 
       return JSON.parse(data.data);
     } catch (error) {
-      console.error('Database cache get error (unexpected):', error);
+      console.error("Database cache get error (unexpected):", error);
       return null;
     }
   }
@@ -114,43 +122,43 @@ class CacheService {
     try {
       // Defensive check to prevent null/undefined data from being stored
       if (data === null || data === undefined) {
-        console.warn(`Attempted to cache null/undefined data for key: ${key}. Skipping cache storage.`);
+        console.warn(
+          `Attempted to cache null/undefined data for key: ${key}. Skipping cache storage.`
+        );
         return;
       }
 
       const expiresAt = new Date(Date.now() + ttl).toISOString();
-      
-      await supabase
-        .from('api_cache')
-        .upsert({
+
+      await supabase.from("api_cache").upsert(
+        {
           cache_key: key,
           data: JSON.stringify(data),
           created_at: new Date().toISOString(),
-          expires_at: expiresAt
-        });
+          expires_at: expiresAt,
+        },
+        { onConflict: "cache_key" } // ✅ avoids duplicate-key 409
+      );
     } catch (error) {
-      console.error('Database cache set error:', error);
+      console.error("Database cache set error:", error);
     }
   }
 
   async deleteFromDatabase(key) {
     try {
-      await supabase
-        .from('api_cache')
-        .delete()
-        .eq('cache_key', key);
+      await supabase.from("api_cache").delete().eq("cache_key", key);
     } catch (error) {
-      console.error('Database cache delete error:', error);
+      console.error("Database cache delete error:", error);
     }
   }
 
   // Cache invalidation
   async invalidate(service, method, params) {
     const key = this.generateKey(service, method, params);
-    
+
     // Remove from memory
     this.memoryCache.delete(key);
-    
+
     // Remove from database
     await this.deleteFromDatabase(key);
   }
@@ -166,11 +174,11 @@ class CacheService {
     // Invalidate database cache
     try {
       await supabase
-        .from('api_cache')
+        .from("api_cache")
         .delete()
-        .like('cache_key', `%${pattern}%`);
+        .like("cache_key", `%${pattern}%`);
     } catch (error) {
-      console.error('Pattern invalidation error:', error);
+      console.error("Pattern invalidation error:", error);
     }
   }
 
@@ -192,29 +200,33 @@ class CacheService {
       total: this.memoryCache.size,
       valid: validEntries,
       expired: expiredEntries,
-      hitRate: this.calculateHitRate()
+      hitRate: this.calculateHitRate(),
     };
   }
 
   async getDatabaseCacheStats() {
     try {
       const { data, error } = await supabase
-        .from('api_cache')
-        .select('cache_key, expires_at');
+        .from("api_cache")
+        .select("cache_key, expires_at");
 
       if (error) throw error;
 
       const now = new Date();
-      const valid = data.filter(item => new Date(item.expires_at) > now).length;
-      const expired = data.filter(item => new Date(item.expires_at) <= now).length;
+      const valid = data.filter(
+        (item) => new Date(item.expires_at) > now
+      ).length;
+      const expired = data.filter(
+        (item) => new Date(item.expires_at) <= now
+      ).length;
 
       return {
         total: data.length,
         valid,
-        expired
+        expired,
       };
     } catch (error) {
-      console.error('Database cache stats error:', error);
+      console.error("Database cache stats error:", error);
       return { total: 0, valid: 0, expired: 0 };
     }
   }
@@ -237,11 +249,11 @@ class CacheService {
   async cleanupDatabaseCache() {
     try {
       await supabase
-        .from('api_cache')
+        .from("api_cache")
         .delete()
-        .lt('expires_at', new Date().toISOString());
+        .lt("expires_at", new Date().toISOString());
     } catch (error) {
-      console.error('Database cleanup error:', error);
+      console.error("Database cleanup error:", error);
     }
   }
 
@@ -249,14 +261,14 @@ class CacheService {
   async preloadUserData(githubUsername, leetcodeUsername) {
     const preloadTasks = [
       // GitHub data
-      { service: 'github', method: 'profile', params: githubUsername },
-      { service: 'github', method: 'repositories', params: githubUsername },
-      { service: 'github', method: 'languages', params: githubUsername },
-      
+      { service: "github", method: "profile", params: githubUsername },
+      { service: "github", method: "repositories", params: githubUsername },
+      { service: "github", method: "languages", params: githubUsername },
+
       // LeetCode data
-      { service: 'leetcode', method: 'profile', params: leetcodeUsername },
-      { service: 'leetcode', method: 'contests', params: leetcodeUsername },
-      { service: 'leetcode', method: 'problems', params: leetcodeUsername }
+      { service: "leetcode", method: "profile", params: leetcodeUsername },
+      { service: "leetcode", method: "contests", params: leetcodeUsername },
+      { service: "leetcode", method: "problems", params: leetcodeUsername },
     ];
 
     // Check which data is already cached
@@ -275,15 +287,12 @@ class CacheService {
   async clearAll() {
     // Clear memory cache
     this.memoryCache.clear();
-    
+
     // Clear database cache
     try {
-      await supabase
-        .from('api_cache')
-        .delete()
-        .neq('cache_key', ''); // Delete all entries
+      await supabase.from("api_cache").delete().neq("cache_key", ""); // Delete all entries
     } catch (error) {
-      console.error('Clear all cache error:', error);
+      console.error("Clear all cache error:", error);
     }
   }
 
@@ -294,7 +303,7 @@ class CacheService {
       cacheData[key] = {
         data: value.data,
         expiry: new Date(value.expiry).toISOString(),
-        timestamp: new Date(value.timestamp).toISOString()
+        timestamp: new Date(value.timestamp).toISOString(),
       };
     }
     return cacheData;
