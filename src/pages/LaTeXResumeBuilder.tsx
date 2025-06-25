@@ -22,7 +22,6 @@ import { TemplateSelector } from '../components/resume/TemplateSelector';
 import { DraftManager } from '../components/resume/DraftManager';
 import { useAuth } from '../contexts/AuthContext';
 import { getDefaultTemplate, LATEX_TEMPLATES } from '../utils/latexTemplates';
-import { supabase } from '../services/supabase';
 import { showToast } from '../components/ui/Toast';
 
 export function LaTeXResumeBuilder() {
@@ -58,68 +57,33 @@ export function LaTeXResumeBuilder() {
     setCurrentTemplateId(template.id);
   };
   
-  // In your LaTeXResumeBuilder.tsx, add this fallback:
-const handleExportPDF = () => {
-  try {
-    // Create a blob with the LaTeX content
-    const blob = new Blob([latexContent], { type: 'text/plain' });
-    
-    // Create a temporary URL for the blob
-    const url = URL.createObjectURL(blob);
-    
-    // Create a temporary anchor element and trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'resume.tex';
-    link.style.display = 'none';
-    
-    // Append to body, click, and remove
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up the URL object
-    URL.revokeObjectURL(url);
-    
-    showToast.success('LaTeX file downloaded successfully');
-  } catch (error) {
-    console.error('Download failed:', error);
-    showToast.error('Failed to download file. Please try again.');
-  }
-};
-    
-    setCompiling(true);
-    setCompilationError(null);
-    
+  // FIXED: Single export function with client-side download only
+  const handleExportLaTeX = () => {
     try {
-      const { data, error } = await supabase.functions.invoke('latex-compiler', {
-        body: { latexContent }
-      });
+      // Create a blob with the LaTeX content
+      const blob = new Blob([latexContent], { type: 'text/plain' });
       
-      if (error) throw new Error(error.message);
-      
-      // Create a blob from the PDF data
-      const blob = new Blob([data], { type: 'application/pdf' });
+      // Create a temporary URL for the blob
       const url = URL.createObjectURL(blob);
       
-      // Create a link and trigger download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'resume.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      // Create a temporary anchor element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'resume.tex';
+      link.style.display = 'none';
       
-      // Clean up
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
       URL.revokeObjectURL(url);
       
-      showToast.success('PDF exported successfully');
+      showToast.success('LaTeX file downloaded successfully');
     } catch (error) {
-      console.error('PDF export failed:', error);
-      setCompilationError(error.message);
-      showToast.error('Failed to export PDF. Please try again.');
-    } finally {
-      setCompiling(false);
+      console.error('Download failed:', error);
+      showToast.error('Failed to download file. Please try again.');
     }
   };
   
@@ -193,7 +157,7 @@ const handleExportPDF = () => {
               <Button
                 variant="outline"
                 icon={Download}
-                onClick={handleExportPDF}
+                onClick={handleExportLaTeX}
                 disabled={compiling}
                 loading={compiling}
               >
