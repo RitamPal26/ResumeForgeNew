@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History, FileCode, Button } from 'lucide-react';
+import { Plus, FileText, BarChart3, Settings, Upload, Eye, Edit, Trash2, User, History, FileCode } from 'lucide-react';
 import { DeveloperProfileDashboard } from '../components/developer/DeveloperProfileDashboard';
 
 export function Dashboard() {
