@@ -228,36 +228,32 @@ export function LaTeXResumeBuilder() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">Common Commands</h4>
-              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                <ul className="list-disc pl-5 space-y-1">
-        <li>
-          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-            {'\\textbf{text}'}
-          </code>{' '}
-          – Bold text
-        </li>
-
-        <li>
-          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-            {'\\textit{text}'}
-          </code>{' '}
-          – Italic text
-        </li>
-
-        <li>
-          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-            {'\\section{title}'}
-          </code>{' '}
-          – Create a section
-        </li>
-
-        <li>
-          <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
-            {'\\begin{itemize} \\item … \\end{itemize}'}
-          </code>{' '}
-          – Bullet list
-        </li>
-      </ul>
+              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1 list-disc pl-5">
+                <li>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                    {'\\textbf{text}'}
+                  </code>{' '}
+                  – Bold text
+                </li>
+                <li>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                    {'\\textit{text}'}
+                  </code>{' '}
+                  – Italic text
+                </li>
+                <li>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                    {'\\section{title}'}
+                  </code>{' '}
+                  – Create a section
+                </li>
+                <li>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                    {'\\begin{itemize} \\item … \\end{itemize}'}
+                  </code>{' '}
+                  – Bullet list
+                </li>
+              </ul>
             </div>
             <div>
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">Resources</h4>
