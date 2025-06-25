@@ -58,11 +58,30 @@ export function LaTeXResumeBuilder() {
     setCurrentTemplateId(template.id);
   };
   
-  const handleExportPDF = async () => {
-    if (!user) {
-      showToast.warning('Please sign in to export your resume');
-      return;
-    }
+  // In your LaTeXResumeBuilder.tsx, add this fallback:
+const handleExportPDF = async () => {
+  try {
+    // Try PDF export first
+    const response = await supabase.functions.invoke('latex-compiler', {
+      body: { latexContent }
+    });
+    
+    if (response.error) throw response.error;
+    
+    // Handle PDF download...
+  } catch (error) {
+    // Fallback: Download LaTeX source
+    const blob = new Blob([latexContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'resume.tex';
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    alert('PDF service unavailable. LaTeX source downloaded - you can compile it locally with any LaTeX distribution.');
+  }
+};
     
     setCompiling(true);
     setCompilationError(null);
