@@ -97,22 +97,22 @@ export function AboutPage() {
 
   const testimonials = [
     {
-      name: 'Sarah Chen',
-      role: 'Senior Software Engineer at Google',
+      name: 'DK Singh',
+      role: 'Senior Software Engineer at Ooogle',
       content: 'ResumeForge helped me identify gaps in my profile that I never noticed. The AI insights were incredibly accurate and actionable.',
       rating: 5,
       avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
     },
     {
-      name: 'Marcus Rodriguez',
-      role: 'Full Stack Developer at Microsoft',
+      name: 'Saransh Banger',
+      role: 'Full Stack Developer at Micosoft',
       content: 'The GitHub analysis revealed optimization opportunities that boosted my profile visibility. Got 3 interview calls within a week!',
-      rating: 5,
+      rating: 4,
       avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'
     },
     {
       name: 'Emily Watson',
-      role: 'Data Scientist at Tesla',
+      role: 'Data Scientist at Tisla',
       content: 'The LeetCode integration and skill assessment helped me focus my preparation for technical interviews. Landed my dream job!',
       rating: 5,
       avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=2'

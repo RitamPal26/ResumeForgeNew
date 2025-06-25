@@ -581,27 +581,73 @@ class GitHubAnalyzer {
 
   // FIXED: Use REAL GitHub commit activity data
   private async analyzeActivityPatterns(
-    username: string,
-    repositories: GitHubRepository[],
-    forceRefresh = false
-  ): Promise<ActivityPattern[]> {
+  username: string,
+  repositories: GitHubRepository[],
+  forceRefresh = false
+): Promise<ActivityPattern[]> {
+  try {
+    // CHANGE 1: Use fetchUserEvents for overall GitHub activity
+    const userEvents = await githubService.fetchUserEvents(username, 300, forceRefresh);
+    
+    const patterns: ActivityPattern[] = [];
+    const now = new Date();
+    
+    // CHANGE 2: Convert daily contributions to weekly patterns
+    for (let i = 0; i < 52; i++) {
+      const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      let weeklyCommits = 0;
+      let weeklyAdditions = 0;
+      let weeklyDeletions = 0;
+      const activeRepos = new Set<string>();
+      
+      // Sum up daily contributions for the week
+      for (let day = 0; day < 7; day++) {
+        const date = new Date(weekStart.getTime() + day * 24 * 60 * 60 * 1000);
+        const dateString = date.toISOString().split('T')[0];
+        const dailyContributions = userEvents[dateString] || 0;
+        
+        weeklyCommits += dailyContributions;
+        weeklyAdditions += dailyContributions * 15; // Estimate additions
+        weeklyDeletions += dailyContributions * 3;  // Estimate deletions
+        
+        // Add some repository names for active weeks
+        if (dailyContributions > 0) {
+          repositories.slice(0, 3).forEach(repo => {
+            if (!repo.fork && !repo.archived) {
+              activeRepos.add(repo.name);
+            }
+          });
+        }
+      }
+      
+      patterns.push({
+        date: weekStart.toISOString().split('T')[0],
+        commits: weeklyCommits,
+        additions: weeklyAdditions,
+        deletions: weeklyDeletions,
+        repositories: Array.from(activeRepos)
+      });
+    }
+    
+    return patterns.reverse(); // Return chronologically
+    
+  } catch (error) {
+    console.warn('Failed to fetch user events, using repository fallback:', error);
+    
+    // CHANGE 3: Keep your existing repository-based fallback but with improvements
     try {
       const patterns: ActivityPattern[] = [];
       const now = new Date();
       const activeRepos = repositories
         .filter((repo) => !repo.fork && !repo.archived)
-        .slice(0, 10); // Limit to avoid rate limits
+        .slice(0, 5); // REDUCED from 10 to 5 to avoid rate limits
 
-      // Aggregate commit activity from all repositories
-      const allCommitActivity = new Map<
-        string,
-        {
-          commits: number;
-          additions: number;
-          deletions: number;
-          repos: Set<string>;
-        }
-      >();
+      const allCommitActivity = new Map<string, {
+        commits: number;
+        additions: number;
+        deletions: number;
+        repos: Set<string>;
+      }>();
 
       // Fetch real commit activity for each repository
       for (const repo of activeRepos) {
@@ -630,14 +676,14 @@ class GitHubAnalyzer {
 
               const weekData = allCommitActivity.get(weekDate)!;
               weekData.commits += week.total || 0;
-              weekData.additions += week.total * 15; // Estimate additions (avg 15 per commit)
-              weekData.deletions += week.total * 5; // Estimate deletions (avg 5 per commit)
+              weekData.additions += week.total * 15;
+              weekData.deletions += week.total * 5;
               weekData.repos.add(repo.name);
             });
           }
 
-          // Small delay to respect rate limits
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // CHANGE 4: Increased delay to avoid rate limits
+          await new Promise((resolve) => setTimeout(resolve, 500)); // INCREASED from 100ms to 500ms
         } catch (error) {
           console.warn(
             `Failed to fetch commit activity for ${repo.full_name}:`,
@@ -667,56 +713,54 @@ class GitHubAnalyzer {
         });
       }
 
-      return patterns.reverse(); // Return chronologically
-    } catch (error) {
-      console.warn(
-        "Failed to fetch real commit activity, using recent activity fallback:",
-        error
-      );
-
-      // Fallback to recent activity analysis
+      return patterns.reverse();
+      
+    } catch (fallbackError) {
+      console.warn('Repository fallback failed, using recent activity:', fallbackError);
+      
+      // CHANGE 5: Enhanced recent activity fallback
       try {
-        const activities = await githubService.fetchRecentActivity(
-          username,
-          100,
-          forceRefresh
-        );
+        const activities = await githubService.fetchRecentActivity(username, 100, forceRefresh);
         const patterns: ActivityPattern[] = [];
         const now = new Date();
 
-        // Group activities by week for the last 52 weeks
         for (let i = 0; i < 52; i++) {
-          const weekStart = new Date(
-            now.getTime() - i * 7 * 24 * 60 * 60 * 1000
-          );
-          const weekEnd = new Date(
-            weekStart.getTime() + 7 * 24 * 60 * 60 * 1000
-          );
+          const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+          const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 
           const weekActivities = activities.filter((activity) => {
             const activityDate = new Date(activity.created_at);
             return activityDate >= weekStart && activityDate < weekEnd;
           });
 
-          // Count commits and estimate additions/deletions
           let commits = 0;
           let additions = 0;
           let deletions = 0;
           const repositories = new Set<string>();
 
           weekActivities.forEach((activity) => {
-            if (activity.type === "PushEvent") {
-              commits += activity.payload?.details
-                ? parseInt(activity.payload.details.split(" ")[0]) || 1
-                : 1;
-              // Realistic estimation based on commit count
-              additions += commits * (10 + Math.floor(Math.random() * 20)); // 10-30 additions per commit
-              deletions += commits * (2 + Math.floor(Math.random() * 10)); // 2-12 deletions per commit
+            // IMPROVED: Better activity counting
+            switch (activity.type) {
+              case 'PushEvent':
+                commits += activity.payload?.details
+                  ? parseInt(activity.payload.details.split(" ")[0]) || 1
+                  : 1;
+                break;
+              case 'CreateEvent':
+              case 'IssuesEvent':
+              case 'PullRequestEvent':
+                commits += 1; // Count other activities as contributions
+                break;
             }
+            
             if (activity.repo) {
               repositories.add(activity.repo.name);
             }
           });
+
+          // More realistic estimation
+          additions = commits * (12 + Math.floor(Math.random() * 18)); // 12-30 additions
+          deletions = commits * (2 + Math.floor(Math.random() * 8));   // 2-10 deletions
 
           patterns.push({
             date: weekStart.toISOString().split("T")[0],
@@ -727,14 +771,12 @@ class GitHubAnalyzer {
           });
         }
 
-        return patterns.reverse(); // Return chronologically
-      } catch (fallbackError) {
-        console.warn(
-          "All activity fetching methods failed, returning empty patterns:",
-          fallbackError
-        );
-
-        // Return empty patterns if all methods fail
+        return patterns.reverse();
+        
+      } catch (finalError) {
+        console.warn('All activity methods failed, returning empty patterns:', finalError);
+        
+        // Return empty patterns as final fallback
         const patterns: ActivityPattern[] = [];
         const now = new Date();
 
@@ -753,6 +795,7 @@ class GitHubAnalyzer {
       }
     }
   }
+}
 
   private classifyDeveloper(
     repositories: GitHubRepository[],
