@@ -129,15 +129,15 @@ export function Dashboard() {
                 <span>Analysis History</span>
               </Link>
             </li>
-            <li>
+            {/*<li>
               <Link
                 to="/templates"
                 className="flex items-center space-x-3 px-4 py-3 text-secondary-600 dark:text-secondary-300 rounded-lg hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-colors"
               >
                 <Upload className="w-5 h-5" />
-                <span>Templates</span>
+                {/*<span>Templates</span>
               </Link>
-            </li>
+            </li>*/}
             <li>
               <Link
                 to="/profile"
